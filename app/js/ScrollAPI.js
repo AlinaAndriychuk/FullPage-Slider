@@ -109,7 +109,7 @@ class MyFullPage {
         if(this.currentPage >= this.amountOfPages - 1 && e.deltaY > 0 && this.endFunction) {
           this.endFunction();
         }
-      }, this.duration);
+      }, 1300);
 
       if (this.currentPage === 0 && e.deltaY > 0 && this.startFunction) {
         this.startFunction();
@@ -118,7 +118,7 @@ class MyFullPage {
       this.debounce = this.debounceFunction(
         ()=> {
           this.goto(this.currentPage + previous, this.activeDot, this.amountOfPages, this.duration);
-      }, this.animationFinished, 2000);
+      }, this.animationFinished, 1300);
       this.debounce();
 
     });
