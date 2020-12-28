@@ -2,21 +2,30 @@
 
 class MyFullPage {
 
-  constructor(dots, duration) {
-    this.amountOfPages = document.querySelectorAll('.section').length;
+  constructor(config) {
+    this.pages = document.querySelectorAll('.section');
+    this.amountOfPages = this.pages.length;
     this.animationFinished = true;
-    this.dots = dots;
+    this.dots = config.dots;
     this.currentPage = 0;
-    this.debounce;
-    this.duration = duration;
+    this.debounce = null;
+    this.duration = config.duration;
+    this.callback = {
+      start: null,
+      end: null,
+    }
 
+    this.init();
+  }
+
+  init() {
     this.readyToScroll();
     this.setSideNavigation();
     this.addScrollListener();
   }
 
   readyToScroll() {
-    setTimeout(()=> window.scrollTo(0, 0), 30)
+    setTimeout(()=> window.scrollTo(0, 0), 35)
   }
 
   setSideNavigation() {
@@ -25,41 +34,35 @@ class MyFullPage {
     }
 
     const sideBar = document.createElement('div');
-    sideBar.className = 'js-sideBar';
+    sideBar.classList.add('js-sideBar');
     document.body.append(sideBar);
 
-    for (let i = 0; i < this.amountOfPages; i++) {
+    this.pages.forEach( () => {
       const dot = document.createElement('div');
       dot.className = 'js-dot';
       sideBar.append(dot);
-    }
+    })
 
     this.activeDot = sideBar.firstChild;
     this.activeDot.classList.add('is-active')
   }
 
-  changeActiveButton(activeDot, num) {
+  changeActiveButton(num) {
     const nextActiveDot = document.querySelectorAll('.js-dot')[num];
     
-    activeDot.classList.remove('is-active');
+    this.activeDot.classList.remove('is-active');
     nextActiveDot.classList.add('is-active');
     this.activeDot = nextActiveDot;
   }
 
   on(event, f) {
-    if(event === 'end') {
-      this.doEndFunction = true;
-      this.endFunction = f;
-    } else if (event === 'start'){
-      this.doStartFunction = true;
-      this.startFunction = f;
-    }
+    this.callback[event] = f;
   }
 
-  debounceFunction(f, animationFinished, ms) {
+  debounceFunction(f, ms) {
   
     return function() {
-      if (!animationFinished) return;
+      if (!this.animationFinished) return;
       f.apply(this, arguments);
   
       this.animationFinished = false;
@@ -69,23 +72,20 @@ class MyFullPage {
   
   }
 
-  goto(num, activeDot, amountOfPages, duration) {
+  goto(num) {
     let numberOfPage = num;
 
-    if (this.amountOfPages && num >= this.amountOfPages) {
-      numberOfPage === this.amountOfPages - 1;
-    } else if (num >= amountOfPages) {
-      numberOfPage === amountOfPages - 1;
+    if (num >= this.amountOfPages) {
+      numberOfPage = this.amountOfPages - 1;
+    } else if (num < 0) {
+      numberOfPage = 0;
     }
 
-    gsap.to('body', {position: 'relative', top: -100 * numberOfPage + 'vh', duration: duration});
+    gsap.to('body', {position: 'relative', top: -100 * numberOfPage + 'vh', duration: this.duration});
 
-    if (this.activeDot) {
-      this.changeActiveButton(this.activeDot, numberOfPage);
-    } else if (activeDot) {
-      this.changeActiveButton(activeDot, numberOfPage);
+    if (this.dots) {
+      this.changeActiveButton(numberOfPage);
     }
-
     this.currentPage = numberOfPage;
   }
 
@@ -96,6 +96,11 @@ class MyFullPage {
         return;
       }
 
+      // this.currentPage === 0 && e.deltaY > 0 && this.callback.start
+      if (this.callback.start) {
+        this.callback.start();
+      }
+
       let previous = 1;
       if (e.deltaY < 0 && this.currentPage === 0) {
         return;
@@ -104,22 +109,19 @@ class MyFullPage {
       } else if (this.currentPage >= this.amountOfPages - 1|| e.deltaY === 0) {
         return;
       }
-      
-      setTimeout(()=> {
-        if(this.currentPage >= this.amountOfPages - 1 && e.deltaY > 0 && this.endFunction) {
-          this.endFunction();
-        }
-      }, 1300);
-
-      if (this.currentPage === 0 && e.deltaY > 0 && this.startFunction) {
-        this.startFunction();
-      }
 
       this.debounce = this.debounceFunction(
         ()=> {
-          this.goto(this.currentPage + previous, this.activeDot, this.amountOfPages, this.duration);
-      }, this.animationFinished, 1300);
+          this.goto(this.currentPage + previous);
+      }, 1300);
       this.debounce();
+
+      // this.currentPage >= this.amountOfPages - 1 && e.deltaY > 0 && this.callback.end
+      setTimeout(()=> {
+        if(this.callback.end) {
+          this.callback.end();
+        }
+      }, 1300);
 
     });
   };
